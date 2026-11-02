@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./config/auth.js";
+import { verifyAuth } from "./middleware/verifyAuth.js";
+import studioRoutes from "./routes/studio.routes.js";
 
 const app = express();
 
@@ -25,5 +27,17 @@ app.get("/api/health", (req, res) => {
     message: "StudioSpace server is healthy",
   });
 });
+
+// Protected test route
+app.get("/api/protected", verifyAuth, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "You are authenticated!",
+    user: res.locals.user,
+  });
+});
+
+// Studio routes
+app.use("/api/studios", studioRoutes);
 
 export default app;
