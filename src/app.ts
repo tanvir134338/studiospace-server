@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./config/auth.js";
@@ -47,5 +47,40 @@ app.use("/api/upload", uploadRoutes);
 
 // Booking routes
 app.use("/api/bookings", bookingRoutes);
+
+// Handle unknown routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
+});
+
+// Global error handler
+const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
+  console.error("Server Error:", error);
+
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  const statusCode =
+    typeof error.status === "number" &&
+    error.status >= 400 &&
+    error.status < 600
+      ? error.status
+      : 500;
+
+  res.status(statusCode).json({
+    success: false,
+    message:
+      statusCode === 500
+        ? "Internal server error"
+        : error.message || "Something went wrong",
+  });
+};
+
+app.use(errorHandler);
 
 export default app;
