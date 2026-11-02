@@ -14,11 +14,13 @@ export async function createBooking(
 
     const { studioId, date, startTime, endTime, totalPrice } = req.body;
 
+    // Validate required fields
     if (
-      !studioId ||
-      !date ||
-      !startTime ||
-      !endTime ||
+      typeof studioId !== "string" ||
+      !studioId.trim() ||
+      typeof date !== "string" ||
+      typeof startTime !== "string" ||
+      typeof endTime !== "string" ||
       totalPrice === undefined
     ) {
       res.status(400).json({
@@ -28,10 +30,51 @@ export async function createBooking(
       return;
     }
 
+    // Validate date format (YYYY-MM-DD)
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+    if (
+      !datePattern.test(date) ||
+      Number.isNaN(parsedDate.getTime()) ||
+      parsedDate.toISOString().slice(0, 10) !== date
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid booking date",
+      });
+      return;
+    }
+
+    // Validate time format (HH:mm)
+    const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+    if (!timePattern.test(startTime) || !timePattern.test(endTime)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid booking time format",
+      });
+      return;
+    }
+
+    // Validate booking time
     if (startTime >= endTime) {
       res.status(400).json({
         success: false,
         message: "End time must be after start time",
+      });
+      return;
+    }
+
+    // Validate total price
+    if (
+      typeof totalPrice !== "number" ||
+      !Number.isFinite(totalPrice) ||
+      totalPrice <= 0
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Total price must be a valid positive number",
       });
       return;
     }
@@ -53,6 +96,7 @@ export async function createBooking(
       return;
     }
 
+    // Create booking
     const booking: Booking = {
       studioId,
       userId: res.locals.user.id,
