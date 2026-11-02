@@ -4,6 +4,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./config/auth.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
 import studioRoutes from "./routes/studio.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
 
 const app = express();
 
@@ -39,5 +40,8 @@ app.get("/api/protected", verifyAuth, (req, res) => {
 
 // Studio routes
 app.use("/api/studios", studioRoutes);
+
+// Image upload routes
+app.use("/api/upload", uploadRoutes);
 
 export default app;
