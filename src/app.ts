@@ -1,15 +1,23 @@
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
+
 import { auth } from "./config/auth.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
+
 import studioRoutes from "./routes/studio.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 
 const app = express();
 
-app.use(cors());
+// CORS Configuration
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  }),
+);
 
 // BetterAuth routes
 app.all("/api/auth/{*any}", toNodeHandler(auth));
@@ -22,7 +30,7 @@ app.get("/", (req, res) => {
   res.send("StudioSpace API is running!");
 });
 
-// Health check route
+// Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
