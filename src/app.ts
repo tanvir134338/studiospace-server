@@ -5,6 +5,7 @@ import { auth } from "./config/auth.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
 import studioRoutes from "./routes/studio.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
 
 const app = express();
 
@@ -43,5 +44,8 @@ app.use("/api/studios", studioRoutes);
 
 // Image upload routes
 app.use("/api/upload", uploadRoutes);
+
+// Booking routes
+app.use("/api/bookings", bookingRoutes);
 
 export default app;
