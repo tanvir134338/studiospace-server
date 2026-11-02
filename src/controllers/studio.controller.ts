@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { ObjectId } from "mongodb";
 import { connectDB } from "../config/db.js";
+import type { Studio } from "../models/studio.model.js";
 
 // Create a new studio
 export async function createStudio(
@@ -43,6 +44,31 @@ export async function getAllStudios(
     const db = await connectDB();
 
     const studios = await db.collection("studios").find().toArray();
+
+    res.status(200).json({
+      success: true,
+      total: studios.length,
+      studios,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Get studios created by the logged-in user
+export async function getMyStudios(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const db = await connectDB();
+
+    const studios = await db
+      .collection<Studio>("studios")
+      .find({ ownerId: res.locals.user.id })
+      .sort({ createdAt: -1 })
+      .toArray();
 
     res.status(200).json({
       success: true,

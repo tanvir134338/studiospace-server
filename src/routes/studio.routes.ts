@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createStudio,
   getAllStudios,
+  getMyStudios,
   getStudioById,
   updateStudio,
   deleteStudio,
@@ -12,6 +13,9 @@ const router = Router();
 
 // Get all studios
 router.get("/", getAllStudios);
+
+// Get my listings (Login required)
+router.get("/my-listings", verifyAuth, getMyStudios);
 
 // Get a single studio
 router.get("/:id", getStudioById);

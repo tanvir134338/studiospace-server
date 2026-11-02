@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { ObjectId } from "mongodb";
 import { connectDB } from "../config/db.js";
 import type { Booking } from "../models/booking.model.js";
 
@@ -13,7 +14,6 @@ export async function createBooking(
 
     const { studioId, date, startTime, endTime, totalPrice } = req.body;
 
-    // Validate required fields
     if (
       !studioId ||
       !date ||
@@ -28,7 +28,6 @@ export async function createBooking(
       return;
     }
 
-    // Validate booking time
     if (startTime >= endTime) {
       res.status(400).json({
         success: false,
@@ -54,7 +53,6 @@ export async function createBooking(
       return;
     }
 
-    // Create booking
     const booking: Booking = {
       studioId,
       userId: res.locals.user.id,
@@ -101,6 +99,55 @@ export async function getMyBookings(
       success: true,
       total: bookings.length,
       bookings,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Cancel a booking
+export async function cancelBooking(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const db = await connectDB();
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid booking ID",
+      });
+      return;
+    }
+
+    const result = await db.collection<Booking>("bookings").updateOne(
+      {
+        _id: new ObjectId(id),
+        userId: res.locals.user.id,
+        status: { $ne: "Cancelled" },
+      },
+      {
+        $set: {
+          status: "Cancelled",
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    if (result.matchedCount === 0) {
+      res.status(404).json({
+        success: false,
+        message: "Booking not found or cannot be cancelled",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully",
     });
   } catch (error) {
     next(error);
