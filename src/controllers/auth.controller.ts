@@ -4,14 +4,16 @@ import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../config/auth.js";
 import { generateToken } from "../utils/jwt.js";
 
-const isProduction = process.env.NODE_ENV === "production";
-
+// Cookie options for production and development
 const cookieOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  secure: process.env.NODE_ENV === "production",
+  sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as
+    | "none"
+    | "lax",
+  maxAge: 24 * 60 * 60 * 1000,
   path: "/",
-} as const;
+};
 
 // Generate JWT
 export async function issueJWT(
@@ -37,10 +39,7 @@ export async function issueJWT(
       email: session.user.email,
     });
 
-    res.cookie("studio_jwt", token, {
-      ...cookieOptions,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    res.cookie("studio_jwt", token, cookieOptions);
 
     res.status(200).json({
       success: true,
@@ -53,7 +52,12 @@ export async function issueJWT(
 
 // Clear JWT Cookie
 export function clearJWT(req: Request, res: Response) {
-  res.clearCookie("studio_jwt", cookieOptions);
+  res.clearCookie("studio_jwt", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+  });
 
   res.status(200).json({
     success: true,
