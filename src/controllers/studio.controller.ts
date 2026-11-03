@@ -3,6 +3,20 @@ import { ObjectId } from "mongodb";
 import { connectDB } from "../config/db.js";
 import type { Studio } from "../models/studio.model.js";
 
+// Allowed fields that users can update
+const allowedUpdateFields = [
+  "name",
+  "description",
+  "location",
+  "pricePerHour",
+  "securityDeposit",
+  "capacity",
+  "image",
+  "images",
+  "amenities",
+  "category",
+] as const;
+
 // Create a new studio
 export async function createStudio(
   req: Request,
@@ -137,16 +151,31 @@ export async function updateStudio(
       return;
     }
 
+    const updateData: Record<string, unknown> = {};
+
+    for (const field of allowedUpdateFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({
+        success: false,
+        message: "No valid fields provided for update",
+      });
+      return;
+    }
+
+    updateData.updatedAt = new Date();
+
     const result = await db.collection("studios").updateOne(
       {
         _id: new ObjectId(id),
         ownerId: res.locals.user.id,
       },
       {
-        $set: {
-          ...req.body,
-          updatedAt: new Date(),
-        },
+        $set: updateData,
       },
     );
 
