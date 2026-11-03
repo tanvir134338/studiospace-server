@@ -15,17 +15,25 @@ import authRoutes from "./routes/auth.routes.js";
 const app = express();
 
 // CORS Configuration
-const allowedOrigins = [
-  "http://localhost:3000",
-  process.env.FRONTEND_URL,
-].filter((origin): origin is string => Boolean(origin));
+const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, "");
+
+const allowedOrigins = new Set(
+  [
+    "http://localhost:3000",
+    "https://studiospace-a-08.vercel.app",
+    process.env.FRONTEND_URL,
+  ]
+    .filter((origin): origin is string => Boolean(origin))
+    .map(normalizeOrigin),
+);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(normalizeOrigin(origin))) {
         callback(null, true);
       } else {
+        console.error("Blocked CORS origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -33,7 +41,7 @@ app.use(
   }),
 );
 
-// BetterAuth routes
+// Better Auth routes
 app.all("/api/auth/{*any}", toNodeHandler(auth));
 
 app.use("/api/session", authRoutes);
