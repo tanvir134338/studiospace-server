@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { toNodeHandler } from "better-auth/node";
 
 import { auth } from "./config/auth.js";
@@ -9,13 +10,25 @@ import studioRoutes from "./routes/studio.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
 // CORS Configuration
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+].filter((origin): origin is string => Boolean(origin));
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
@@ -23,7 +36,10 @@ app.use(
 // BetterAuth routes
 app.all("/api/auth/{*any}", toNodeHandler(auth));
 
+app.use("/api/session", authRoutes);
+
 // Middleware
+app.use(cookieParser());
 app.use(express.json());
 
 // Home route

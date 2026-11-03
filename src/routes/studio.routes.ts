@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import {
   createStudio,
   getAllStudios,
@@ -8,29 +9,26 @@ import {
   deleteStudio,
   getFeaturedStudios,
 } from "../controllers/studio.controller.js";
+
 import { verifyAuth } from "../middleware/verifyAuth.js";
+import { verifyJWT } from "../middleware/verifyJWT.js";
 
 const router = Router();
 
-// Get all studios
+// Public routes
 router.get("/", getAllStudios);
-
-// Get my listings (Login required)
-router.get("/my-listings", verifyAuth, getMyStudios);
-
-// Get featured studios
 router.get("/featured", getFeaturedStudios);
 
-// Get a single studio
+// Authenticated routes
+// Keep specific routes before dynamic :id routes
+router.get("/my-listings", verifyAuth, getMyStudios);
+
+// JWT protected mutations
+router.post("/", verifyJWT, createStudio);
+router.patch("/:id", verifyJWT, updateStudio);
+router.delete("/:id", verifyJWT, deleteStudio);
+
+// Dynamic route must be last
 router.get("/:id", getStudioById);
-
-// Create a studio (Login required)
-router.post("/", verifyAuth, createStudio);
-
-// Update a studio (Login required)
-router.patch("/:id", verifyAuth, updateStudio);
-
-// Delete a studio (Login required)
-router.delete("/:id", verifyAuth, deleteStudio);
 
 export default router;
