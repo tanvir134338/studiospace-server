@@ -8,6 +8,7 @@ import { verifyAuth } from "./middleware/verifyAuth.js";
 import studioRoutes from "./routes/studio.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
 
 const app = express();
 
@@ -55,6 +56,9 @@ app.use("/api/upload", uploadRoutes);
 
 // Booking routes
 app.use("/api/bookings", bookingRoutes);
+
+// Review routes
+app.use("/api/reviews", reviewRoutes);
 
 // Handle unknown routes
 app.use((req, res) => {

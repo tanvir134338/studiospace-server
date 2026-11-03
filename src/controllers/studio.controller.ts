@@ -206,3 +206,29 @@ export async function deleteStudio(
     next(error);
   }
 }
+
+// Get 6 newest studios for homepage
+export async function getFeaturedStudios(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const db = await connectDB();
+
+    const studios = await db
+      .collection<Studio>("studios")
+      .find()
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+
+    res.status(200).json({
+      success: true,
+      total: studios.length,
+      studios,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { ObjectId } from "mongodb";
+
 import { connectDB } from "../config/db.js";
 import type { Booking } from "../models/booking.model.js";
+import type { Studio } from "../models/studio.model.js";
 
 // Create a new booking
 export async function createBooking(
@@ -12,7 +14,7 @@ export async function createBooking(
   try {
     const db = await connectDB();
 
-    const { studioId, date, startTime, endTime, totalPrice } = req.body;
+    const { studioId, date, startTime, endTime } = req.body;
 
     // Validate required fields
     if (
@@ -20,12 +22,20 @@ export async function createBooking(
       !studioId.trim() ||
       typeof date !== "string" ||
       typeof startTime !== "string" ||
-      typeof endTime !== "string" ||
-      totalPrice === undefined
+      typeof endTime !== "string"
     ) {
       res.status(400).json({
         success: false,
         message: "All booking fields are required",
+      });
+      return;
+    }
+
+    // Validate Studio ID
+    if (!ObjectId.isValid(studioId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid studio ID",
       });
       return;
     }
@@ -42,6 +52,23 @@ export async function createBooking(
       res.status(400).json({
         success: false,
         message: "Invalid booking date",
+      });
+      return;
+    }
+
+    // Prevent past bookings
+    const today = new Date();
+
+    const todayString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    if (date < todayString) {
+      res.status(400).json({
+        success: false,
+        message: "Past dates cannot be booked",
       });
       return;
     }
@@ -66,32 +93,59 @@ export async function createBooking(
       return;
     }
 
-    // Validate total price
-    if (
-      typeof totalPrice !== "number" ||
-      !Number.isFinite(totalPrice) ||
-      totalPrice <= 0
-    ) {
-      res.status(400).json({
+    // Find studio from MongoDB
+    const studio = await db.collection<Studio>("studios").findOne({
+      _id: new ObjectId(studioId),
+    });
+
+    if (!studio) {
+      res.status(404).json({
         success: false,
-        message: "Total price must be a valid positive number",
+        message: "Studio not found",
       });
       return;
     }
 
-    // Check for existing confirmed bookings
+    // Validate studio hourly rate
+    if (
+      typeof studio.pricePerHour !== "number" ||
+      !Number.isFinite(studio.pricePerHour) ||
+      studio.pricePerHour <= 0
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid studio rental price",
+      });
+      return;
+    }
+
+    // Calculate booking duration
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+
+    const duration = (endMinutes - startMinutes) / 60;
+
+    // Calculate rental price on the server
+    const totalPrice = Number((duration * studio.pricePerHour).toFixed(2));
+
+    // Check for existing pending or confirmed bookings
     const existingBooking = await db.collection<Booking>("bookings").findOne({
       studioId,
       date,
-      status: "Confirmed",
+      status: { $in: ["Pending", "Confirmed"] },
       startTime: { $lt: endTime },
       endTime: { $gt: startTime },
     });
 
+    // Reject overlapping bookings
     if (existingBooking) {
       res.status(409).json({
         success: false,
-        message: "This studio is already booked for the selected time",
+        message:
+          "This studio is already booked or has a pending request for the selected time.",
       });
       return;
     }
@@ -149,7 +203,7 @@ export async function getMyBookings(
   }
 }
 
-// Cancel a booking
+// Cancel a pending booking
 export async function cancelBooking(
   req: Request,
   res: Response,
@@ -159,6 +213,7 @@ export async function cancelBooking(
     const db = await connectDB();
     const id = req.params.id;
 
+    // Validate booking ID
     if (typeof id !== "string" || !ObjectId.isValid(id)) {
       res.status(400).json({
         success: false,
@@ -167,11 +222,12 @@ export async function cancelBooking(
       return;
     }
 
+    // Cancel only the logged-in user's pending booking
     const result = await db.collection<Booking>("bookings").updateOne(
       {
         _id: new ObjectId(id),
         userId: res.locals.user.id,
-        status: { $ne: "Cancelled" },
+        status: "Pending",
       },
       {
         $set: {
@@ -184,7 +240,7 @@ export async function cancelBooking(
     if (result.matchedCount === 0) {
       res.status(404).json({
         success: false,
-        message: "Booking not found or cannot be cancelled",
+        message: "Pending booking not found or cannot be cancelled",
       });
       return;
     }

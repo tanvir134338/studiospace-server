@@ -6,6 +6,7 @@ import {
   getStudioById,
   updateStudio,
   deleteStudio,
+  getFeaturedStudios,
 } from "../controllers/studio.controller.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 
@@ -16,6 +17,9 @@ router.get("/", getAllStudios);
 
 // Get my listings (Login required)
 router.get("/my-listings", verifyAuth, getMyStudios);
+
+// Get featured studios
+router.get("/featured", getFeaturedStudios);
 
 // Get a single studio
 router.get("/:id", getStudioById);
